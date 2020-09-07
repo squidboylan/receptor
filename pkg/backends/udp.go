@@ -35,7 +35,7 @@ func NewUDPDialer(address string, redial bool) (*UDPDialer, error) {
 
 // Start runs the given session function over this backend service
 func (b *UDPDialer) Start(ctx context.Context) (chan netceptor.BackendSession, error) {
-	return dialerSession(ctx, b.redial, 5*time.Second,
+	return dialerSession(ctx, b.redial, 100*time.Millisecond,
 		func(closeChan chan struct{}) (netceptor.BackendSession, error) {
 			dialer := net.Dialer{}
 			conn, err := dialer.DialContext(ctx, "udp", b.address)

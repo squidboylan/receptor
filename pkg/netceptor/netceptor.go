@@ -233,9 +233,9 @@ func New(ctx context.Context, NodeID string, AllowedPeers []string) *Netceptor {
 	}
 	s.addNameHash(NodeID)
 	s.context, s.cancelFunc = context.WithCancel(ctx)
-	s.updateRoutingTableChan = tickrunner.Run(s.context, s.updateRoutingTable, time.Hour*24, time.Second*1)
+	s.updateRoutingTableChan = tickrunner.Run(s.context, s.updateRoutingTable, time.Hour*24, time.Millisecond*100)
 	s.sendRouteFloodChan = tickrunner.Run(s.context, s.sendRoutingUpdate, RouteUpdateTime, time.Millisecond*100)
-	s.sendServiceAdsChan = tickrunner.Run(s.context, s.sendServiceAds, ServiceAdTime, time.Second*5)
+	s.sendServiceAdsChan = tickrunner.Run(s.context, s.sendServiceAds, ServiceAdTime, time.Millisecond*1)
 	go s.monitorConnectionAging()
 	go s.expireSeenUpdates()
 	return &s

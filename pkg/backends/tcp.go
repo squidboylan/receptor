@@ -33,7 +33,7 @@ func NewTCPDialer(address string, redial bool, tls *tls.Config) (*TCPDialer, err
 
 // Start runs the given session function over this backend service
 func (b *TCPDialer) Start(ctx context.Context) (chan netceptor.BackendSession, error) {
-	return dialerSession(ctx, b.redial, 5*time.Second,
+	return dialerSession(ctx, b.redial, 100*time.Millisecond,
 		func(closeChan chan struct{}) (netceptor.BackendSession, error) {
 			var conn net.Conn
 			var err error
