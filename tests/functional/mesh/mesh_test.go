@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -793,6 +794,77 @@ func TestWork(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
+}
+
+func TestNetceptorConn(t *testing.T) {
+	totalNodes := 100
+	data := YamlData{}
+	data.Nodes = make(map[string]*YamlNode)
+	// Generate a mesh where each node n > 1 is connected to node 1
+	// if they exist
+
+	connections := make(map[string]YamlConnection)
+	nodeID := "Node0"
+	data.Nodes[nodeID] = &YamlNode{
+		Connections: connections,
+		Nodedef: []interface{}{
+			map[interface{}]interface{}{
+				"tcp-listener": map[interface{}]interface{}{},
+			},
+		},
+	}
+	for i := 1; i < totalNodes; i++ {
+		connections = make(map[string]YamlConnection)
+		nodeID := "Node" + strconv.Itoa(i)
+		connections["Node0"] = YamlConnection{
+			Index: 0,
+		}
+		data.Nodes[nodeID] = &YamlNode{
+			Connections: connections,
+			Nodedef:     []interface{}{},
+		}
+	}
+	mesh, err := NewLibMeshFromYaml(data, filepath.Join(TestBaseDir, t.Name()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
+	err = mesh.WaitForReady(ctx)
+
+	tmpNodes := mesh.Nodes()
+	nodes := make(map[string]*LibNode)
+
+	for k, v := range tmpNodes {
+		nodes[k] = v.(*LibNode)
+	}
+
+	service, err := nodes["Node1"].NetceptorInstance.ListenAndAdvertise("simple", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go func() {
+		for {
+			// TODO: handle errors here
+			conn, _ := service.Accept()
+			conn.Write([]byte("connected"))
+		}
+	}()
+
+	for _, v := range nodes {
+		//for i := 0; i < 10; i++ {
+		buf := make([]byte, 9)
+		conn, err := v.NetceptorInstance.Dial("Node1", "simple", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		conn.Read(buf)
+
+		if !reflect.DeepEqual(buf, []byte("connected")) {
+			t.Fatal("failed to read 'connected' from service")
+		}
+		//}
+	}
 }
 
 func benchmarkLinearMeshStartup(totalNodes int, b *testing.B) {
